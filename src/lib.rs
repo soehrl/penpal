@@ -370,7 +370,7 @@ impl<O: Serialize, T: Send> Correspondence<O, T> {
     ///
     /// Association is used to store a state that is shared between the individual invocations of
     /// the callback function and the correspondance.
-    pub fn association(&self) -> &std::sync::RwLock<T> {
+    pub fn association(&self) -> &Arc<std::sync::RwLock<T>> {
         &self.association
     }
 
@@ -512,7 +512,7 @@ impl<IncomingTransport: Read + Send + 'static, OutgoingTransport: Write + Send +
     >(
         self,
         association: T,
-        mut f: impl FnMut(I, &RwLock<T>, &CollectionBox<O>) -> Result<(), CorrespondenceError>
+        mut f: impl FnMut(I, &Arc<RwLock<T>>, &CollectionBox<O>) -> Result<(), CorrespondenceError>
             + Send
             + 'static,
     ) -> Result<Correspondence<O, T>, std::io::Error> {
