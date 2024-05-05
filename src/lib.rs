@@ -440,6 +440,13 @@ impl<IncomingTransport: Read, OutgoingTransport: Write + Send + 'static>
 pub enum CorrespondenceError {
     ReceiveError(#[from] ReceiveError),
     CollectionBoxError(#[from] CollectionBoxError),
+    Other(Arc<dyn std::error::Error + Send + Sync>),
+}
+
+impl From<std::io::Error> for CorrespondenceError {
+    fn from(err: std::io::Error) -> Self {
+        Self::ReceiveError(ReceiveError::ReadError(Arc::new(err)))
+    }
 }
 
 impl<IncomingTransport: Read + Send + 'static, OutgoingTransport: Write + Send + 'static>
