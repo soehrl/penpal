@@ -398,6 +398,14 @@ impl<O: Serialize, T: Send> Correspondence<O, T> {
     }
 }
 
+impl<O: Serialize, T: Send> Drop for Correspondence<O, T> {
+    fn drop(&mut self) {
+        if self.collection_box.result.0.lock().unwrap().is_none() {
+            let _ = self.collection_box.farewell();
+        }
+    }
+}
+
 impl<IncomingTransport: Read, OutgoingTransport: Write + Send + 'static>
     Transport<IncomingTransport, OutgoingTransport>
 {
