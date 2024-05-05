@@ -374,6 +374,13 @@ impl<O: Serialize, T: Send> Correspondence<O, T> {
         &self.association
     }
 
+    /// Checks if the correspondance has finished.
+    pub fn finished(&self) -> bool {
+        let (result, _) = &*self.result;
+        let result = result.lock().unwrap();
+        result.is_some()
+    }
+
     /// Wait for the correspondance to finish.
     ///
     /// This function will block until the correspondance has finished. If the correspondance has
