@@ -52,29 +52,15 @@ impl From<std::io::Error> for ReceiveError {
     }
 }
 
-fn read_until_error<R: Read>(reader: &mut R, buffer: &mut [u8]) -> std::io::Result<()> {
-    let mut bytes_read = 0;
-    while bytes_read < buffer.len() {
-        match reader.read(&mut buffer[bytes_read..]) {
-            Ok(n) => bytes_read += n,
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-            Err(e) => {
-                return Err(e);
-            }
-        }
-    }
-    Ok(())
-}
-
 fn receive<I: for<'de> Deserialize<'de>>(
     mut read: impl Read,
     buffer: &mut Vec<u8>,
 ) -> Result<Option<I>, ReceiveError> {
     let mut header = [0; 4];
-    read_until_error(&mut read, &mut header)?;
+    read.read_exact(&mut header)?;
     let payload_length = u32::from_le_bytes(header) as usize;
     buffer.resize(payload_length, 0);
-    read_until_error(&mut read, buffer)?;
+    read.read_exact(buffer)?;
     let message = postcard::from_bytes(&buffer)?;
     Ok(message)
 }
