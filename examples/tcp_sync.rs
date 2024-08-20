@@ -69,11 +69,20 @@ fn client() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let server = std::thread::spawn(server);
-    let client = std::thread::spawn(client);
+    let mut args = std::env::args().skip(1);
 
-    client.join().unwrap()?;
-    server.join().unwrap()?;
+    match args.next().as_ref().map(|s| s.as_str()) {
+        Some("server") => server()?,
+        Some("client") => client()?,
+        Some(arg) => println!("expected 'server' or 'client', got '{}'", arg),
+        None => {
+            let server = std::thread::spawn(server);
+            let client = std::thread::spawn(client);
+
+            client.join().unwrap()?;
+            server.join().unwrap()?;
+        }
+    }
 
     Ok(())
 }
