@@ -191,6 +191,26 @@ impl<T: Serialize> Clone for CollectionBox<T> {
     }
 }
 
+impl<T: Serialize + Send + 'static> CollectionBox<T> {
+    pub fn new<W: Write + Send + 'static>(outgoing: W) -> Result<Self, std::io::Error> {
+        let (post_office, collection_boxes) = std::sync::mpsc::channel();
+        let result = Arc::new((Mutex::new(None), Condvar::new()));
+        {
+            let result = result.clone();
+            std::thread::Builder::new()
+                .name("post office".to_string())
+                .spawn(move || {
+                    CollectionBox::post_office(collection_boxes, outgoing, result);
+                })?;
+        }
+        let collection_box = CollectionBox {
+            post_office,
+            result,
+        };
+        Ok(collection_box)
+    }
+}
+
 impl<T: Serialize> CollectionBox<T> {
     fn post_office(
         collection_boxes: std::sync::mpsc::Receiver<Option<T>>,
@@ -277,6 +297,13 @@ pub struct Mailbox<IncomingTransport: Read, T: for<'a> Deserialize<'a>> {
 }
 
 impl<Incoming: Read, T: for<'a> Deserialize<'a>> Mailbox<Incoming, T> {
+    pub fn new(incoming: Incoming) -> Self {
+        Mailbox {
+            incoming,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
     /// Receive a message from the penpal.
     ///
     /// This function will block until a message is received. If the penpal has sent a farewell
@@ -398,25 +425,9 @@ impl<IncomingTransport: Read, OutgoingTransport: Write + Send + 'static>
     pub fn create_infrastructue<I: for<'a> Deserialize<'a>, O: Serialize + Send + 'static>(
         self,
     ) -> Result<(Mailbox<IncomingTransport, I>, CollectionBox<O>), std::io::Error> {
-        let (post_office, collection_boxes) = std::sync::mpsc::channel();
         let Self { incoming, outgoing } = self;
-        let result = Arc::new((Mutex::new(None), Condvar::new()));
-        {
-            let result = result.clone();
-            std::thread::Builder::new()
-                .name("post office".to_string())
-                .spawn(move || {
-                    CollectionBox::post_office(collection_boxes, outgoing, result);
-                })?;
-        }
-        let mailbox = Mailbox {
-            incoming,
-            _phantom: std::marker::PhantomData,
-        };
-        let collection_box = CollectionBox {
-            post_office,
-            result,
-        };
+        let mailbox = Mailbox::<IncomingTransport, I>::new(incoming);
+        let collection_box = CollectionBox::<O>::new(outgoing)?;
         Ok((mailbox, collection_box))
     }
 }
