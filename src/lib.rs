@@ -41,7 +41,7 @@ use thiserror::Error;
 #[derive(Error, Debug, Clone)]
 pub enum ReceiveError {
     #[error("failed to read from stream")]
-    ReadError(Arc<std::io::Error>),
+    ReadError(#[source] Arc<std::io::Error>),
     #[error("failed to deserialize message")]
     DeserializeError(#[from] postcard::Error),
 }
@@ -70,7 +70,7 @@ pub enum DeliveryError {
     #[error("failed to serialize message")]
     SerializeError(#[from] postcard::Error),
     #[error("failed to write to stream")]
-    WriteError(Arc<std::io::Error>),
+    WriteError(#[source] Arc<std::io::Error>),
 }
 
 impl From<std::io::Error> for DeliveryError {
@@ -437,7 +437,7 @@ impl<IncomingTransport: Read, OutgoingTransport: Write + Send + 'static>
 pub enum CorrespondenceError {
     ReceiveError(#[from] ReceiveError),
     CollectionBoxError(#[from] CollectionBoxError),
-    Other(Arc<dyn std::error::Error + Send + Sync>),
+    Other(#[source] Arc<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<std::io::Error> for CorrespondenceError {
