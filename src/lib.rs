@@ -164,9 +164,11 @@ impl Transport<std::net::TcpStream, std::net::TcpStream> {
 }
 
 #[derive(Error, Debug, Clone)]
-#[error("sending a message has failed")]
 pub enum CollectionBoxError {
+    #[error("failed to send message")]
     DeliveryError(#[from] DeliveryError),
+
+    #[error("failed to send message: farewell message already sent")]
     FarewellAlreadySent,
 }
 
@@ -433,10 +435,14 @@ impl<IncomingTransport: Read, OutgoingTransport: Write + Send + 'static>
 }
 
 #[derive(Error, Debug, Clone)]
-#[error("correspondence has failed")]
 pub enum CorrespondenceError {
+    #[error("failed to receive message")]
     ReceiveError(#[from] ReceiveError),
+
+    #[error("failed to send message")]
     CollectionBoxError(#[from] CollectionBoxError),
+
+    #[error("correspondance error")]
     Other(#[source] Arc<dyn std::error::Error + Send + Sync>),
 }
 
